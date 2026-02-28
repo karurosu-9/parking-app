@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use app\Models\Sector;
-use app\Models\Reservation;
+use App\Models\Sector;
+use App\Models\Reservation;
 
 
 class Place extends Model
