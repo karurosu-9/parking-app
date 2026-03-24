@@ -10,12 +10,17 @@
 
     const fetchPlaces = async () => {
         try {
-            const response = await axios.get('http://localhost/api/places');
+            const response = await axios.get('http://localhost/api/places')
             data.places = response.data.data;
         } catch (error) {
             console.log(error);
         }
     }
+
+    const updatePlaceInList = (updatedPlace) => {
+        const index = data.places.findIndex(p => p.id === updatedPlace.id);
+        if(index !== -1) data.places[index] = updatedPlace;
+    };
 
     onMounted(() => fetchPlaces());
 </script>
@@ -26,6 +31,7 @@
             v-for="place in data.places"
             :key="place.id"
             :place="place"
+            @updated-place="updatePlaceInList"
         />
     </div>
 </template>
