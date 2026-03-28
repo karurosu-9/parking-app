@@ -10,6 +10,7 @@ import axios from 'axios';
 
     const emit = defineEmits(['updated-place']);
 
+    // 駐車場の予約
     const reservePlace = async (placeId) => {
         try {
             const response = await axios.post('http://localhost/api/book/reservation',
@@ -22,6 +23,25 @@ import axios from 'axios';
             console.log(error);
         }
     };
+
+    // 予約のキャンセル
+    const cancelReservation = async (place) => {
+        const reservation = findReservationByUser(place, 'reserved');
+        try {
+            const response = await axios.put(`http://localhost/api/cancel/${reservation.id}/reservation`,
+                {
+                }
+            );
+            emit('updated-place', response.data.place);
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    const findReservationByUser = (place, status) => {
+        return place.reservations.find(r => r.user_id ===  1 && r.status === status)
+    }
+
 </script>
 
 <template>
@@ -58,7 +78,8 @@ import axios from 'axios';
                         @click = reservePlace(place.id)>Reserve</button>
                     <template v-else-if="place.status === 'reserved'">
                         <button class="btn btn-sm btn-primary">Park here</button>
-                        <button class="btn btn-sm btn-warning">Cancel</button>
+                        <button class="btn btn-sm btn-warning"
+                            @click="cancelReservation(place)">Cancel</button>
                     </template>
 
                     <button class="btn btn-sm btn-danger"

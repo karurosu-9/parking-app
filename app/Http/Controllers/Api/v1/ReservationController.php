@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlaceResource;
 use App\Models\Place;
 use App\Models\Reservation;
+use App\Services\ReservationService;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,47 +14,46 @@ use Illuminate\Support\Facades\DB;
 
 class ReservationController extends Controller
 {
+    public function __construct(
+        private ReservationService $reservationService
+    ) {}
+
     public function store(Request $request):JsonResponse
     {
-        // ユーザーが予約済みかどうかチェック
-        $reservationExists = Reservation::where([
-            'user_id' => 1,
-            'status' => 'reserved',
-        ])->exists();
+        try {
+            $place = $this->reservationService->reserve(
+                userId: 1,
+                placeId: $request->place_id
+            );
 
-        if($reservationExists) {
             return response()->json([
-                'error' => 'すでに予約済みになります。 他で予約したい場合はキャンセルしてください。'
+                'place' => PlaceResource::make($place),
+                'message' => '予約しました。',
             ]);
-        }
-
-        $place = Place::find($request->place_id);
-
-        if(!$place || $place->status !== 'available') {
+        } catch (RuntimeException $e) {
             return response()->json([
-                'error' => 'こちらは利用できません。',
-            ]);
+                'error' => $e->getMessage(),
+            ], 422);
         }
+    }
 
-        DB::transaction(function() use ($place, $request) {
-            $reservation = Reservation::create([
-                'user_id' => 1,
-                'place_id' => $place->id,
-                'status' => 'reserved'
+
+    public function cancel(Request $request, Reservation $reservation):JsonResponse
+    {
+        try {
+            $place = $this->reservationService->cancel(
+                userId: 1,
+                reservation: $reservation
+            );
+
+            return response()->json([
+                'place' => PlaceResource::make($place),
+                'message' => '予約をキャンセルしました。',
             ]);
-
-            $reservation->place()->update([
-                'status' => 'reserved',
-            ]);
-        });
-
-        // 場所の予約状況のステータスを更新
-        $place->refresh();
-
-        return response()->json([
-            'place' => PlaceResource::make($place->load('sector', 'reservations')),
-            'message' => '予約しました。'
-        ]);
-
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
     }
 }
