@@ -1,5 +1,6 @@
 <script setup>
 import axios from 'axios';
+import { useToast } from 'vue-toastification';
 
     const props = defineProps({
         place: {
@@ -8,8 +9,12 @@ import axios from 'axios';
         }
     })
 
+    // 成功・失敗メッセージの表示
+    const toast = useToast();
+
     const emit = defineEmits(['updated-place']);
 
+    // 駐車場の予約
     const reservePlace = async (placeId) => {
         try {
             const response = await axios.post('http://localhost/api/book/reservation',
@@ -17,11 +22,81 @@ import axios from 'axios';
                     place_id: placeId
                 }
             );
-            emit('updated-place', response.data.place);
+            if (response.data.message) {
+                toast.success(response.data.message, {
+                    timeout: 4000
+                })
+
+                emit('updated-place', response.data.place);
+            }
         } catch (error) {
             console.log(error);
+
+            if (error.response.data.error) {
+                toast.error(error.response.data.error, {
+                    timeout: 4000
+                });
+            }
         }
     };
+
+    // 予約のキャンセル
+    const cancelReservation = async (place) => {
+        const reservation = findReservationByUser(place, 'reserved');
+        try {
+            const response = await axios.put(`http://localhost/api/cancel/${reservation.id}/reservation`,
+                {
+                }
+            );
+            if (response.data.message) {
+                toast.success(response.data.message, {
+                    timeout: 4000
+                })
+
+                emit('updated-place', response.data.place);
+            }
+        } catch (error) {
+            console.log(error);
+
+            if (error.response.data.error) {
+                toast.error(error.response.data.error, {
+                    timeout: 4000
+                });
+            }
+        }
+    };
+
+    // 駐車開始
+    const startParking = async (place) => {
+        const reservation = findReservationByUser(place, 'reserved');
+        try {
+            const response = await axios.put(`http://localhost/api/start/${reservation.id}/parking`,
+                {
+                }
+            );
+            if (response.data.message) {
+                toast.success(response.data.message, {
+                    timeout: 4000
+                })
+
+                emit('updated-place', response.data.place);
+            }
+        } catch (error) {
+            console.log(error);
+
+            if (error.response.data.error) {
+                toast.error(error.response.data.error, {
+                    timeout: 4000
+                });
+            }
+        }
+    };
+
+
+    const findReservationByUser = (place, status) => {
+        return place.reservations.find(r => r.user_id ===  1 && r.status === status)
+    }
+
 </script>
 
 <template>
@@ -57,8 +132,9 @@ import axios from 'axios';
                         v-if="place.status === 'available'"
                         @click = reservePlace(place.id)>Reserve</button>
                     <template v-else-if="place.status === 'reserved'">
-                        <button class="btn btn-sm btn-primary">Park here</button>
-                        <button class="btn btn-sm btn-warning">Cancel</button>
+                        <button class="btn btn-sm btn-primary" @click="startParking(place)">Park here</button>
+                        <button class="btn btn-sm btn-warning"
+                            @click="cancelReservation(place)">Cancel</button>
                     </template>
 
                     <button class="btn btn-sm btn-danger"
