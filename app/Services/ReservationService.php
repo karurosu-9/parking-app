@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Place;
 use App\Models\Reservation;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -12,13 +13,12 @@ class ReservationService
     public function reserve(int $userId, int $placeId): Place
     {
         // ユーザーが予約済みかどうかチェック
-        $reservationExists = Reservation::where([
-            'user_id' => $userId,
-            'status' => 'reserved',
-        ])->exists();
+        $reservationExists = Reservation::where('user_id', $userId)
+            ->whereIn('status', ['reserved', 'parked'])
+            ->exists();
 
         if ($reservationExists) {
-            throw new RuntimeException('すでに予約済みになります。 他で予約したい場合はキャンセルしてください。');
+            throw new RuntimeException('すでに予約済みになります。他で予約したい場合はキャンセルしてください。');
         }
 
         $place = Place::find($placeId);
@@ -55,6 +55,26 @@ class ReservationService
 
             $reservation->place()->update([
                 'status' => 'available',
+            ]);
+        });
+
+        return $reservation->place()->first()->load('sector', 'reservations');
+    }
+
+    public function startParking(int $userId, Reservation $reservation): Place
+    {
+        if ($reservation->user_id !== $userId) {
+            throw new RuntimeException('予約が見つかりません。');
+        }
+
+        DB::transaction(function () use ($reservation) {
+            $reservation->update([
+                'status' => 'parked',
+                'start_time' => Carbon::now()
+            ]);
+
+            $reservation->place()->update([
+                'status' => 'occupied',
             ]);
         });
 

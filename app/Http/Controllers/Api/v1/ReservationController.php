@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class ReservationController extends Controller
 {
@@ -49,6 +50,25 @@ class ReservationController extends Controller
             return response()->json([
                 'place' => PlaceResource::make($place),
                 'message' => '予約をキャンセルしました。',
+            ]);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function startParking(Request $request, Reservation $reservation):JsonResponse
+    {
+        try {
+            $place = $this->reservationService->startParking(
+                userId: 1,
+                reservation: $reservation
+            );
+
+            return response()->json([
+                'place' => PlaceResource::make($place),
+                'message' => '駐車を開始しました。',
             ]);
         } catch (RuntimeException $e) {
             return response()->json([
